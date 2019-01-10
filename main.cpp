@@ -78,6 +78,9 @@ public:
     {
         vTasks.push_back( p );
     }
+
+    void End( int p );
+
     string Text()
     {
         stringstream ss;
@@ -102,6 +105,8 @@ public:
     }
 
     void Allocate( int id, int bytes );
+
+    void Free( int id );
 
     vector<int> Allocated( int id );
 
@@ -143,6 +148,15 @@ void cFrames::Allocate( int id, int bytes )
     }
 }
 
+    void cFrames::Free( int id )
+    {
+         for( int& a : myFrame )
+         {
+             if( a == id )
+                a = -1;
+         }
+    }
+
 string cFrames::Text()
 {
     stringstream ss;
@@ -161,20 +175,31 @@ string cFrames::Text()
     ss << "\n";
     return ss.str();
 }
-    vector<int> cFrames::Allocated( int id )
+vector<int> cFrames::Allocated( int id )
+{
+    vector< int > vf;
+    int kf = 0;
+    for( int a : myFrame )
     {
-        vector< int > vf;
-        int kf = 0;
-        for( int a : myFrame )
+        if( a == id )
         {
-            if( a == id )
-            {
-                vf.push_back( kf );
-            }
-            kf++;
+            vf.push_back( kf );
         }
-        return vf;
+        kf++;
     }
+    return vf;
+}
+
+void cTasks::End( int p )
+{
+    for( auto& t : vTasks )
+    {
+        if( t.ID() == p )
+        {
+            Frames.Free( p );
+        }
+    }
+}
 
 string cProcess::PageTable()
 {
@@ -233,6 +258,12 @@ void ReadInputFile( const string fname )
             int p = line.find(" ",5);
             int pm = atoi( line.substr( p ).c_str() );
             Tasks.Add( cProcess( pn, pm ));
+        }
+        else if( line.find("END") == 0 )
+        {
+            // process ending
+            cout << line << "\n";
+            Tasks.End( atoi( line.substr(4).c_str() ) );
         }
         else if( line.find("PM") == 0 )
         {
