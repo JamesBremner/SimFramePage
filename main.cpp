@@ -93,12 +93,6 @@ public:
         vTasks.push_back( p );
     }
 
-    /** Reference an address
-        @param[in] p process id
-        @param[in] a virtual address
-    */
-    string Ref( int p, int a );
-
     /** Stop process and free allocated memory
         @param[in] p id of process to be stopped
     */
@@ -154,6 +148,13 @@ public:
         @return frame where page is allocated
     */
     int FrameFromPage( int process, int page );
+
+        /** Reference an address
+        @param[in] p process id
+        @param[in] a virtual address
+        @return string displaying reference details
+    */
+    string Ref( int p, int a );
 
     /// string displaying frames
     string Text();
@@ -285,11 +286,11 @@ void cTasks::End( int p )
     }
 }
 
-string cTasks::Ref( int p, int a )
+string cFrames::Ref( int p, int a )
 {
-    int page = floor( (float)a / Frames.PageSizeBytes() );
-    int offset = a - page * Frames.PageSizeBytes();
-    vector<int> vf = Frames.Allocated( p );
+    int page = floor( (float)a / PageSizeBytes() );
+    int offset = a - page * PageSizeBytes();
+    vector<int> vf = Allocated( p );
     int frame = vf[ page ];
 
     std::stringstream ss;
@@ -361,7 +362,7 @@ void ReadInputFile( const string fname )
             int pn = atoi( line.substr(4).c_str() );
             int p = line.find(" ",5);
             int pa = atoi( line.substr( p ).c_str() );
-            cout << Tasks.Ref( pn, pa );
+            cout << Frames.Ref( pn, pa );
         }
         else if( line.find("END") == 0 )
         {
