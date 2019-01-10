@@ -33,7 +33,7 @@ Process Page    Frame
 
 Process 1 referencing 20 at frame 0 offset 20
 Process 3 referencing 1234 at frame 3 offset 1234
-Process 3 referencing 2345 at frame 4 offset 2343
+Process 3 referencing 2345 at frame 4 offset 343
 ```
 
 Note:
