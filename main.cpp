@@ -79,6 +79,8 @@ public:
         vTasks.push_back( p );
     }
 
+    string Ref( int p, int a );
+
     void End( int p );
 
     string Text()
@@ -110,7 +112,18 @@ public:
 
     vector<int> Allocated( int id );
 
+    int FrameFromPage( int process, int page );
+
     string Text();
+
+    int PageSize()
+    {
+        return myPAGESIZE;
+    }
+    int PageSizeBytes()
+    {
+        return 1000 * myPAGESIZE;
+    }
 
 private:
     int myRAM;
@@ -132,7 +145,7 @@ cProcess::cProcess( int id, int bytes )
 
 void cFrames::Allocate( int id, int bytes )
 {
-    int pages = ceil( (float)(bytes+1) / ( 1000 * myPAGESIZE) );
+    int pages = ceil( (float)(bytes+1) / PageSizeBytes() );
 
     //cout << "allocate " << pages << "\n";
 
@@ -190,6 +203,25 @@ vector<int> cFrames::Allocated( int id )
     return vf;
 }
 
+int cFrames::FrameFromPage( int process, int page )
+{
+    cout << "FrameFromPage " << process <<" "<<page<<"\n";
+    int kf = 0;
+    for( int a : myFrame )
+    {
+        if( a == process )
+        {
+            page--;
+            if( ! page )
+            {
+                return kf;
+            }
+        }
+        kf++;
+    }
+    throw std::runtime_error("FrameFromPage failed");
+}
+
 void cTasks::End( int p )
 {
     for( auto& t : vTasks )
@@ -199,6 +231,19 @@ void cTasks::End( int p )
             Frames.Free( p );
         }
     }
+}
+
+string cTasks::Ref( int p, int a )
+{
+    int page = floor( (float)a / Frames.PageSizeBytes() );
+    int offset = a - page * Frames.PageSize();
+    vector<int> vf = Frames.Allocated( p );
+    int frame = vf[ page ];
+
+    std::stringstream ss;
+    ss << "Process " << p << " referencing " << a
+        << " at frame " << frame << " offset " << offset << "\n";
+    return ss.str();
 }
 
 string cProcess::PageTable()
@@ -234,7 +279,7 @@ void ReadInputFile( const string fname )
     if( ! inf.is_open() )
     {
         cout << "cannot open " << fname << "\n";
-        return;
+        throw std::runtime_error("Cannot open input file");
     }
     string line;
     while( getline( inf, line ))
@@ -259,6 +304,13 @@ void ReadInputFile( const string fname )
             int pm = atoi( line.substr( p ).c_str() );
             Tasks.Add( cProcess( pn, pm ));
         }
+        else if( line.find("REF") == 0 )
+        {
+            int pn = atoi( line.substr(4).c_str() );
+            int p = line.find(" ",5);
+            int pa = atoi( line.substr( p ).c_str() );
+            cout << Tasks.Ref( pn, pa );
+        }
         else if( line.find("END") == 0 )
         {
             // process ending
@@ -280,7 +332,13 @@ void ReadInputFile( const string fname )
 
 int main(int argc, char** argv )
 {
-    ReadInputFile( argv[1] );
+    try {
+        ReadInputFile( argv[1] );
+    }
+    catch( std::runtime_error& e )
+    {
+        cout << e.what() << "\n";
+    }
 
     return 0;
 }
