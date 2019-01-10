@@ -47,12 +47,20 @@ Prints the list of all memory frames. Each line will have the frame number follo
 
 using namespace std;
 
-
+/** A process that requests frames */
 class cProcess
 {
 public:
+
+    /** CTOR
+        @param[in] id of process
+        @param[in] bytes of memory required
+
+        Allocates memory
+    */
     cProcess( int id, int bytes );
 
+    /// String describing process
     string Text()
     {
         stringstream ss;
@@ -60,6 +68,7 @@ public:
         return ss.str();
     }
 
+    /// String describing process page table
     string PageTable();
 
     int ID()
@@ -71,18 +80,31 @@ private:
     int myBytes;
 };
 
+/** The current processes that have allocated frames */
 class cTasks
 {
 public:
+
+    /** Add a process
+        @param[in] process to add
+    */
     void Add( const cProcess& p )
     {
         vTasks.push_back( p );
     }
 
+    /** Reference an address
+        @param[in] p process id
+        @param[in] a virtual address
+    */
     string Ref( int p, int a );
 
+    /** Stop process and free allocated memory
+        @param[in] p id of process to be stopped
+    */
     void End( int p );
 
+    /// String describing processed
     string Text()
     {
         stringstream ss;
@@ -90,36 +112,59 @@ public:
             ss << t.Text() << "\n";
         return ss.str();
     }
+
+    /// String describing page table
     string PageTable();
 
 private:
     vector< cProcess > vTasks;
 };
 
+/** Track frames allocated to processes */
 class cFrames
 {
 public:
-    void Resize( int RAM, int PAGESIZE )
-    {
-        myRAM = RAM;
-        myPAGESIZE = PAGESIZE;
-        myFrame.resize( RAM / PAGESIZE, -1 );
-    }
 
+    /** Set memory and frame size
+        @param[in] RAM number of megabytes of memory
+        @param[in] PAGESIZE page size in megabytes
+    */
+    void Resize( int RAM, int PAGESIZE );
+
+    /** Allocate memory
+        @param[in] id of process requesting memory
+        @param[in] bytes requested
+    */
     void Allocate( int id, int bytes );
 
+    /** Free memory
+        @param[in] id of process freeing memory allocated to it
+    */
     void Free( int id );
 
+    /** Memory allocated to process
+        @param[in] id of process
+        @return vector if fame indices allocated to process
+    */
     vector<int> Allocated( int id );
 
+    /** Frame from page
+        @param[in] process id
+        @param[in] page virtual page in process
+        @return frame where page is allocated
+    */
     int FrameFromPage( int process, int page );
 
+    /// string displaying frames
     string Text();
 
+    /// frame size in megabytes
     int PageSize()
     {
         return myPAGESIZE;
     }
+
+    /// frame size in bytes
     int PageSizeBytes()
     {
         return 1000 * myPAGESIZE;
@@ -128,19 +173,26 @@ public:
 private:
     int myRAM;
     int myPAGESIZE;
-    vector< int > myFrame;
+    vector< int > myFrame;  ///< process ids frames allocated to, -1 for free
 };
 
 int RAM;
 int PAGESIZE;
-cTasks Tasks;
-cFrames Frames;
+cTasks Tasks;           // the runnig tasks
+cFrames Frames;         // the memory
 
 cProcess::cProcess( int id, int bytes )
     : myID( id )
     , myBytes( bytes )
 {
     Frames.Allocate( myID, myBytes );
+}
+
+void cFrames::Resize( int RAM, int PAGESIZE )
+{
+    myRAM = RAM;
+    myPAGESIZE = PAGESIZE;
+    myFrame.resize( RAM / PAGESIZE, -1 );
 }
 
 void cFrames::Allocate( int id, int bytes )
@@ -161,14 +213,14 @@ void cFrames::Allocate( int id, int bytes )
     }
 }
 
-    void cFrames::Free( int id )
+void cFrames::Free( int id )
+{
+    for( int& a : myFrame )
     {
-         for( int& a : myFrame )
-         {
-             if( a == id )
-                a = -1;
-         }
+        if( a == id )
+            a = -1;
     }
+}
 
 string cFrames::Text()
 {
@@ -236,13 +288,13 @@ void cTasks::End( int p )
 string cTasks::Ref( int p, int a )
 {
     int page = floor( (float)a / Frames.PageSizeBytes() );
-    int offset = a - page * Frames.PageSize();
+    int offset = a - page * Frames.PageSizeBytes();
     vector<int> vf = Frames.Allocated( p );
     int frame = vf[ page ];
 
     std::stringstream ss;
     ss << "Process " << p << " referencing " << a
-        << " at frame " << frame << " offset " << offset << "\n";
+       << " at frame " << frame << " offset " << offset << "\n";
     return ss.str();
 }
 
@@ -332,7 +384,8 @@ void ReadInputFile( const string fname )
 
 int main(int argc, char** argv )
 {
-    try {
+    try
+    {
         ReadInputFile( argv[1] );
     }
     catch( std::runtime_error& e )
