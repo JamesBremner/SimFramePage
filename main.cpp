@@ -57,6 +57,9 @@ public:
         @param[in] bytes of memory required
 
         Allocates memory
+
+        The allocated memory will be set to zero
+        if task creation fails for any reason
     */
     cProcess( int id, int bytes );
 
@@ -94,6 +97,9 @@ public:
         @return true if successful
     */
     bool Add( const cProcess& p );
+
+    /// Find process from id
+    bool Find( int p );
 
     /** Stop process and free allocated memory
         @param[in] p id of process to be stopped
@@ -189,9 +195,14 @@ cProcess::cProcess( int id, int bytes )
     : myID( id )
     , myBytes( bytes )
 {
+    if( Tasks.Find( id )) {
+        // already task running with same ID
+        myBytes = 0;
+        return;
+    }
     if( ! Frames.Allocate( myID, myBytes ) )
     {
-        // allocation failed
+        // memory allocation failed
         myBytes = 0;
     }
 }
@@ -291,13 +302,23 @@ int cFrames::FrameFromPage( int process, int page )
     throw std::runtime_error("FrameFromPage failed");
 }
 
-    bool cTasks::Add( const cProcess& p )
+bool cTasks::Add( const cProcess& p )
+{
+    if( ! p.AllocatedBytes() )
+        return false;
+    vTasks.push_back( p );
+    return true;
+}
+
+bool cTasks::Find( int p )
+{
+    for( auto& t : vTasks )
     {
-        if( ! p.AllocatedBytes() )
-            return false;
-        vTasks.push_back( p );
-        return true;
+        if( t.ID() == p )
+            return true;
     }
+    return false;
+}
 
 void cTasks::End( int p )
 {
