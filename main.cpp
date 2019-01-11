@@ -186,21 +186,81 @@ private:
     vector< int > myFrame;  ///< process ids frames allocated to, -1 for free
 };
 
-int RAM;
-int PAGESIZE;
-cTasks Tasks;           // the runnig tasks
-cFrames Frames;         // the memory
+/** Memory Management Simulator */
+class cMMSim
+{
+public:
+    cMMSim()
+        : myRAM( -1 )
+        , myPAGESIZE( -1 )
+    {
+
+    }
+    void RAM( int r )
+    {
+        myRAM = r;
+        Resize();
+    }
+    void PAGESIZE( int p )
+    {
+        myPAGESIZE = p;
+        Resize();
+    }
+    bool Add( const cProcess& p )
+    {
+        return myTasks.Add( p );
+    }
+    string Ref( int p, int a )
+    {
+        return myFrames.Ref( p, a );
+    }
+    void End( int p )
+    {
+        myTasks.End( p );
+    }
+    string FrameTable()
+    {
+        return myFrames.Text();
+    }
+    string PageTable()
+    {
+        return myTasks.Text();
+    }
+    cTasks& Tasks()
+    {
+        return myTasks;
+    }
+    cFrames& Frames()
+    {
+        return myFrames;
+    }
+private:
+    int myRAM;
+    int myPAGESIZE;
+    cTasks myTasks;           // the runnig tasks
+    cFrames myFrames;         // the memory
+
+    void Resize()
+    {
+        if( myRAM > 0 && myPAGESIZE > 0 )
+            myFrames.Resize( myRAM, myPAGESIZE );
+    }
+};
+
+/** Construct the simulator */
+cMMSim SIM;
 
 cProcess::cProcess( int id, int bytes )
     : myID( id )
     , myBytes( bytes )
 {
-    if( Tasks.Find( id )) {
+    if( SIM.Tasks().Find( id ))
+    {
         // already task running with same ID
         myBytes = 0;
         return;
     }
-    if( ! Frames.Allocate( myID, myBytes ) )
+    if( ! SIM.Frames().Allocate( myID, myBytes ) )
     {
         // memory allocation failed
         myBytes = 0;
@@ -326,7 +386,7 @@ void cTasks::End( int p )
     {
         if( t.ID() == p )
         {
-            Frames.Free( p );
+            SIM.Frames().Free( p );
         }
     }
 }
@@ -347,7 +407,7 @@ string cFrames::Ref( int p, int a )
 string cProcess::PageTable()
 {
     stringstream ss;
-    vector< int > vf = Frames.Allocated( myID );
+    vector< int > vf = SIM.Frames().Allocated( myID );
     int kp = 0;
     for( int f : vf )
     {
@@ -395,13 +455,11 @@ void ReadInputFile( const string fname )
 
         if( vp[0] == "RAM" )
         {
-            RAM = atoi( vp[1].c_str() );
+            SIM.RAM( atoi( vp[1].c_str() ) );
         }
         else if(  vp[0] == "PAGESIZE" )
         {
-            PAGESIZE = atoi( vp[1].c_str() );
-
-            Frames.Resize( RAM, PAGESIZE );
+            SIM.PAGESIZE( atoi( vp[1].c_str() ) );
         }
         else if(  vp[0] == "NEW" )
         {
@@ -409,28 +467,28 @@ void ReadInputFile( const string fname )
             cout << line << "\n";
             int pn = atoi( vp[1].c_str() );
             int pm = atoi( vp[2].c_str() );
-            if( ! Tasks.Add( cProcess( pn, pm )))
+            if( ! SIM.Add( cProcess( pn, pm )))
                 cout << "Memory allocation failed\n";
         }
         else if(  vp[0] == "REF")
         {
             int pn = atoi( vp[1].c_str() );
             int pa = atoi( vp[2].c_str() );
-            cout << Frames.Ref( pn, pa );
+            cout << SIM.Ref( pn, pa );
         }
         else if(  vp[0] == "END")
         {
             // process ending
             cout << line << "\n";
-            Tasks.End( atoi( vp[1].c_str() ) );
+            SIM.End( atoi( vp[1].c_str() ) );
         }
         else if(  vp[0] == "PM")
         {
-            cout << Frames.Text();
+            cout << SIM.FrameTable();
         }
         else if(  vp[0] == "PT")
         {
-            cout << Tasks.PageTable();
+            cout << SIM.PageTable();
         }
     }
 //    cout << "RAM: " << RAM << " PAGESIZE: " << PAGESIZE<< "\n";
