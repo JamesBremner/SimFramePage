@@ -149,10 +149,10 @@ public:
     */
     int FrameFromPage( int process, int page );
 
-        /** Reference an address
-        @param[in] p process id
-        @param[in] a virtual address
-        @return string displaying reference details
+    /** Reference an address
+    @param[in] p process id
+    @param[in] a virtual address
+    @return string displaying reference details
     */
     string Ref( int p, int a );
 
@@ -338,43 +338,50 @@ void ReadInputFile( const string fname )
     while( getline( inf, line ))
     {
         //cout << line << "\n";
-        if( line.find("RAM") == 0 )
+
+        // split input line into space delimited parameters
+        vector<string> vp;
+        std::stringstream sst(line);
+        std::string a;
+        while( getline( sst, a, ' ' ) )
+            vp.push_back(a);
+
+
+        if( vp[0] == "RAM" )
         {
-            RAM = atoi( line.substr(4).c_str() );
+            RAM = atoi( vp[1].c_str() );
         }
-        else if( line.find("PAGESIZE") == 0 )
+        else if(  vp[0] == "PAGESIZE" )
         {
-            PAGESIZE = atoi( line.substr(9).c_str() );
+            PAGESIZE = atoi( vp[1].c_str() );
 
             Frames.Resize( RAM, PAGESIZE );
         }
-        else if( line.find("NEW") == 0 )
+        else if(  vp[0] == "NEW" )
         {
             // new process starting
             cout << line << "\n";
-            int pn = atoi( line.substr(4).c_str() );
-            int p = line.find(" ",5);
-            int pm = atoi( line.substr( p ).c_str() );
+            int pn = atoi( vp[1].c_str() );
+            int pm = atoi( vp[2].c_str() );
             Tasks.Add( cProcess( pn, pm ));
         }
-        else if( line.find("REF") == 0 )
+        else if(  vp[0] == "REF")
         {
-            int pn = atoi( line.substr(4).c_str() );
-            int p = line.find(" ",5);
-            int pa = atoi( line.substr( p ).c_str() );
+            int pn = atoi( vp[1].c_str() );
+            int pa = atoi( vp[2].c_str() );
             cout << Frames.Ref( pn, pa );
         }
-        else if( line.find("END") == 0 )
+        else if(  vp[0] == "END")
         {
             // process ending
             cout << line << "\n";
-            Tasks.End( atoi( line.substr(4).c_str() ) );
+            Tasks.End( atoi( vp[1].c_str() ) );
         }
-        else if( line.find("PM") == 0 )
+        else if(  vp[0] == "PM")
         {
             cout << Frames.Text();
         }
-        else if( line.find("PT") == 0 )
+        else if(  vp[0] == "PT")
         {
             cout << Tasks.PageTable();
         }
