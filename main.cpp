@@ -71,9 +71,13 @@ public:
     /// String describing process page table
     string PageTable();
 
-    int ID()
+    int ID() const
     {
         return myID;
+    }
+    int AllocatedBytes() const
+    {
+        return myBytes;
     }
 private:
     int myID;
@@ -85,20 +89,18 @@ class cTasks
 {
 public:
 
-    /** Add a process
+    /** Add a process, if it has been allocated memory
         @param[in] process to add
+        @return true if successful
     */
-    void Add( const cProcess& p )
-    {
-        vTasks.push_back( p );
-    }
+    bool Add( const cProcess& p );
 
     /** Stop process and free allocated memory
         @param[in] p id of process to be stopped
     */
     void End( int p );
 
-    /// String describing processed
+    /// String describing process
     string Text()
     {
         stringstream ss;
@@ -128,8 +130,9 @@ public:
     /** Allocate memory
         @param[in] id of process requesting memory
         @param[in] bytes requested
+        @return true if allocation successful
     */
-    void Allocate( int id, int bytes );
+    bool Allocate( int id, int bytes );
 
     /** Free memory
         @param[in] id of process freeing memory allocated to it
@@ -186,7 +189,11 @@ cProcess::cProcess( int id, int bytes )
     : myID( id )
     , myBytes( bytes )
 {
-    Frames.Allocate( myID, myBytes );
+    if( ! Frames.Allocate( myID, myBytes ) )
+    {
+        // allocation failed
+        myBytes = 0;
+    }
 }
 
 void cFrames::Resize( int RAM, int PAGESIZE )
@@ -196,7 +203,7 @@ void cFrames::Resize( int RAM, int PAGESIZE )
     myFrame.resize( RAM / PAGESIZE, -1 );
 }
 
-void cFrames::Allocate( int id, int bytes )
+bool cFrames::Allocate( int id, int bytes )
 {
     int pages = ceil( (float)(bytes+1) / PageSizeBytes() );
 
@@ -212,6 +219,15 @@ void cFrames::Allocate( int id, int bytes )
                 break;
         }
     }
+
+    // check not enough memory
+    if( pages )
+    {
+        // free any memory that was allocated
+        Free( id );
+        return false;
+    }
+    return true;
 }
 
 void cFrames::Free( int id )
@@ -274,6 +290,14 @@ int cFrames::FrameFromPage( int process, int page )
     }
     throw std::runtime_error("FrameFromPage failed");
 }
+
+    bool cTasks::Add( const cProcess& p )
+    {
+        if( ! p.AllocatedBytes() )
+            return false;
+        vTasks.push_back( p );
+        return true;
+    }
 
 void cTasks::End( int p )
 {
@@ -345,7 +369,8 @@ void ReadInputFile( const string fname )
         std::string a;
         while( getline( sst, a, ' ' ) )
             vp.push_back(a);
-
+        if( ! vp.size() )
+            continue;
 
         if( vp[0] == "RAM" )
         {
@@ -363,7 +388,8 @@ void ReadInputFile( const string fname )
             cout << line << "\n";
             int pn = atoi( vp[1].c_str() );
             int pm = atoi( vp[2].c_str() );
-            Tasks.Add( cProcess( pn, pm ));
+            if( ! Tasks.Add( cProcess( pn, pm )))
+                cout << "Memory allocation failed\n";
         }
         else if(  vp[0] == "REF")
         {
