@@ -34,6 +34,8 @@
 			<Add option="-std=c++11" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="cMMSim.cpp" />
+		<Unit filename="cMMSim.h" />
 		<Unit filename="main.cpp" />
 		<Extensions>
 			<code_completion />
